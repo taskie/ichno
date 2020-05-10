@@ -1,9 +1,12 @@
 use std::{env, ffi::OsStr, io::stdout, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
-use std::io::Write;
+use std::io::{Write, Error};
 use structopt::{clap, StructOpt};
 use treblo::{hex::to_hex_string, walk};
+use sha1::Sha1;
+use sha2::Sha256;
+use treblo::walk::Hasher;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "treblo")]
@@ -25,6 +28,9 @@ pub struct Opt {
     #[structopt(short, long)]
     json: bool,
 
+    #[structopt(short = "H", long, default_value = "sha1")]
+    hasher: String,
+
     #[structopt(short, long)]
     blob_only: bool,
 
@@ -42,6 +48,7 @@ pub struct Opt {
 
     #[structopt(long = "no-ignore-exclude", parse(from_flag = std::ops::Not::not))]
     ignore_exclude: bool,
+
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,6 +57,23 @@ struct Record<'a> {
     object_type: &'a str,
     digest: &'a str,
     path: &'a str,
+}
+
+struct Sha256Holder(Sha256);
+
+impl Write for Sha256Holder {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        self.0.write(buf)
+    }
+    fn flush(&mut self) -> Result<(), Error> {
+        self.0.flush()
+    }
+}
+impl Hasher for Sha256Holder {
+    fn result_vec(&mut self) -> Vec<u8> {
+        use sha2::digest::FixedOutput;
+        self.0.clone().fixed_result().to_vec()
+    }
 }
 
 fn main() {
@@ -72,7 +96,21 @@ fn main() {
             }
             wb.build()
         };
-        walk::walk(base_path, w, &mut |p, e, is_tree| {
+        let tw = walk::TrebloWalk {
+            hasher_supplier: match opt.hasher.as_str() {
+                "sha1" =>  {
+                    use sha1::Digest;
+                    || Box::new(Sha1::new())
+                },
+                "sha256" => {
+                    use sha2::Digest;
+                    || Box::new(Sha256Holder(Sha256::new()))
+                },
+                _ => panic!("unknown hasher: {}", opt.hasher),
+            },
+            blob_only: opt.blob_only,
+        };
+        tw.walk(base_path, w, &mut |p, e, is_tree| {
             if opt.blob_only && is_tree {
                 return;
             }

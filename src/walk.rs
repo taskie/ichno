@@ -2,72 +2,106 @@ use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
+use std::io::Write;
 
 use ignore;
-use sha1::Digest;
+use digest::Digest;
+use sha1;
 
 use crate::object::{blob_from_path, tree_from_entries, FileMode, TreeEntry};
+use sha1::Sha1;
 
-fn resolve<P, F>(resolving_map: &mut BTreeMap<PathBuf, TreeEntry>, parent: P, f: &mut F)
-where
-    P: AsRef<Path>,
-    F: FnMut(&Path, &TreeEntry, bool) -> (),
-{
-    let mut paths = Vec::new();
-    let mut entries = Vec::new();
-    for (path, entry) in resolving_map.range(parent.as_ref().to_owned()..).into_iter() {
-        if !path.starts_with(parent.as_ref()) {
-            break;
-        }
-        paths.push(path.clone());
-        entries.push(entry.clone());
-    }
-    entries.sort_by_key(|e| {
-        let mut bs = e.name.as_bytes().to_vec();
-        if e.file_mode == FileMode::DIR {
-            bs.push('/' as u8);
-        }
-        bs
-    });
-    let mut sha1 = sha1::Sha1::new();
-    tree_from_entries(&mut sha1, entries.iter()).unwrap();
-    let digest = sha1.result().to_vec();
-    for path in paths.iter() {
-        resolving_map.remove(path);
-    }
-    let name = parent.as_ref().file_name().unwrap_or_default();
-    let parent_entry = TreeEntry::new(FileMode::DIR, name.to_str().unwrap().to_owned(), digest);
-    f(parent.as_ref(), &parent_entry, true);
-    resolving_map.insert(parent.as_ref().to_owned(), parent_entry);
+pub trait Hasher: Write {
+    fn result_vec(&mut self) -> Vec<u8>;
 }
 
-pub fn walk<P: AsRef<Path>, F>(path: P, walk: ignore::Walk, f: &mut F)
-where
-    F: FnMut(&Path, &TreeEntry, bool) -> (),
-{
-    let mut resolving_map = BTreeMap::<PathBuf, TreeEntry>::new();
-    let is_dir = path.as_ref().is_dir();
-    let mut walk_state = WalkState::new(path.as_ref().to_owned(), is_dir);
-    for result in walk {
-        match result {
-            Ok(entry) => {
-                let file_mode = FileMode::from(entry.metadata().unwrap());
-                if file_mode != FileMode::DIR {
-                    let mut sha1 = sha1::Sha1::new();
-                    blob_from_path(&mut sha1, entry.path()).unwrap();
-                    let digest = sha1.result().to_vec();
-                    let path = entry.path();
-                    let name = path.file_name().unwrap().to_str().unwrap().to_owned();
-                    let te = TreeEntry::new(file_mode, name, digest);
-                    f(path, &te, false);
-                    resolving_map.insert(path.to_owned(), te);
-                    walk_state.process(Some(&path), &mut |p| resolve(&mut resolving_map, p, f));
-                }
-            }
-            Err(err) => eprintln!("ERROR: {}", err),
+impl Hasher for Sha1 {
+    fn result_vec(&mut self) -> Vec<u8> {
+        use sha1::digest::FixedOutput;
+        self.clone().fixed_result().to_vec()
+    }
+}
+
+pub struct TrebloWalk {
+    pub hasher_supplier: fn () -> Box<dyn Hasher>,
+    pub blob_only: bool,
+}
+
+impl Default for TrebloWalk {
+    fn default() -> Self {
+        TrebloWalk {
+            hasher_supplier: || { Box::new(sha1::Sha1::new()) },
+            blob_only: false,
         }
     }
-    walk_state.process::<&Path, _>(None, &mut |p| resolve(&mut resolving_map, p, f));
+}
+
+impl TrebloWalk {
+    fn resolve<P, F>(&self, resolving_map: &mut BTreeMap<PathBuf, TreeEntry>, parent: P, f: &mut F)
+        where
+            P: AsRef<Path>,
+            F: FnMut(&Path, &TreeEntry, bool) -> (),
+    {
+        let mut paths = Vec::new();
+        let mut entries = Vec::new();
+        for (path, entry) in resolving_map.range(parent.as_ref().to_owned()..).into_iter() {
+            if !path.starts_with(parent.as_ref()) {
+                break;
+            }
+            paths.push(path.clone());
+            entries.push(entry.clone());
+        }
+        entries.sort_by_key(|e| {
+            let mut bs = e.name.as_bytes().to_vec();
+            if e.file_mode == FileMode::DIR {
+                bs.push('/' as u8);
+            }
+            bs
+        });
+        let mut hasher = (self.hasher_supplier)();
+        tree_from_entries(&mut hasher, entries.iter()).unwrap();
+        let digest = hasher.result_vec();
+        for path in paths.iter() {
+            resolving_map.remove(path);
+        }
+        let name = parent.as_ref().file_name().unwrap_or_default();
+        let parent_entry = TreeEntry::new(FileMode::DIR, name.to_str().unwrap().to_owned(), digest);
+        f(parent.as_ref(), &parent_entry, true);
+        resolving_map.insert(parent.as_ref().to_owned(), parent_entry);
+    }
+
+    pub fn walk<P: AsRef<Path>, F>(&self, path: P, walk: ignore::Walk, f: &mut F)
+        where
+            F: FnMut(&Path, &TreeEntry, bool) -> (),
+    {
+        let mut resolving_map = BTreeMap::<PathBuf, TreeEntry>::new();
+        let is_dir = path.as_ref().is_dir();
+        let mut walk_state = WalkState::new(path.as_ref().to_owned(), is_dir);
+        for result in walk {
+            match result {
+                Ok(entry) => {
+                    let file_mode = FileMode::from(entry.metadata().unwrap());
+                    if file_mode != FileMode::DIR {
+                        let mut hasher = (self.hasher_supplier)();
+                        blob_from_path(&mut hasher, entry.path()).unwrap();
+                        let digest = hasher.result_vec();
+                        let path = entry.path();
+                        let name = path.file_name().unwrap().to_str().unwrap().to_owned();
+                        let te = TreeEntry::new(file_mode, name, digest);
+                        f(path, &te, false);
+                        if !self.blob_only {
+                            resolving_map.insert(path.to_owned(), te);
+                            walk_state.process(Some(&path), &mut |p| self.resolve(&mut resolving_map, p, f));
+                        }
+                    }
+                }
+                Err(err) => eprintln!("ERROR: {}", err),
+            }
+        }
+        if !self.blob_only {
+            walk_state.process::<&Path, _>(None, &mut |p| self.resolve(&mut resolving_map, p, f));
+        }
+    }
 }
 
 struct WalkState<T> {
