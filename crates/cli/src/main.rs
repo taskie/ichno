@@ -1,12 +1,11 @@
 use std::{env, ffi::OsStr, io::stdout, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
-use std::io::{Write, Error};
-use structopt::{clap, StructOpt};
-use treblo::{hex::to_hex_string, walk};
 use sha1::Sha1;
 use sha2::Sha256;
-use treblo::walk::Hasher;
+use std::io::{Error, Write};
+use structopt::{clap, StructOpt};
+use treblo::{hex::to_hex_string, walk, walk::Hasher};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "treblo")]
@@ -34,6 +33,9 @@ pub struct Opt {
     #[structopt(short, long)]
     blob_only: bool,
 
+    #[structopt(short = "E", long)]
+    no_error: bool,
+
     #[structopt(long = "no-ignore", parse(from_flag = std::ops::Not::not))]
     ignore: bool,
 
@@ -48,7 +50,6 @@ pub struct Opt {
 
     #[structopt(long = "no-ignore-exclude", parse(from_flag = std::ops::Not::not))]
     ignore_exclude: bool,
-
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,6 +66,7 @@ impl Write for Sha256Holder {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         self.0.write(buf)
     }
+
     fn flush(&mut self) -> Result<(), Error> {
         self.0.flush()
     }
@@ -98,17 +100,18 @@ fn main() {
         };
         let tw = walk::TrebloWalk {
             hasher_supplier: match opt.hasher.as_str() {
-                "sha1" =>  {
+                "sha1" => {
                     use sha1::Digest;
                     || Box::new(Sha1::new())
-                },
+                }
                 "sha256" => {
                     use sha2::Digest;
                     || Box::new(Sha256Holder(Sha256::new()))
-                },
+                }
                 _ => panic!("unknown hasher: {}", opt.hasher),
             },
             blob_only: opt.blob_only,
+            no_error: opt.no_error,
         };
         tw.walk(base_path, w, &mut |p, e, is_tree| {
             if opt.blob_only && is_tree {
