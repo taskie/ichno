@@ -1,5 +1,8 @@
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::{
     fmt,
+    fmt::{Debug, Formatter},
     fs::{self, File},
     io::{self, Error, Read, Write},
     path::Path,
@@ -7,13 +10,10 @@ use std::{
 };
 
 use crate::hex::to_hex_string;
+use std::io::BufReader;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct FileMode(i32);
-
-use std::fmt::{Debug, Formatter};
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 impl FileMode {
     pub const DIR: FileMode = FileMode(0o40000);
@@ -21,12 +21,20 @@ impl FileMode {
     pub const REGULAR: FileMode = FileMode(0o100644);
     pub const SYMLINK: FileMode = FileMode(0o120000);
 
+    fn is_executable(md: fs::Metadata) -> bool {
+        if cfg!(unix) {
+            md.permissions().mode() & 0o111 != 0
+        } else {
+            false
+        }
+    }
+
     pub fn from(md: fs::Metadata) -> FileMode {
         if md.is_dir() {
             FileMode::DIR
         } else if md.file_type().is_symlink() {
             FileMode::SYMLINK
-        } else if md.permissions().mode() & 0o111 != 0 {
+        } else if FileMode::is_executable(md) {
             FileMode::EXECUTABLE
         } else {
             FileMode::REGULAR
@@ -88,7 +96,8 @@ where
     } else {
         let mut f = File::open(path.as_ref())?;
         let metadata_n = f.metadata()?.len() as usize;
-        blob_from_read(w, &mut f, metadata_n)
+        let mut br = BufReader::new(&mut f);
+        blob_from_read(w, &mut br, metadata_n)
     }
 }
 

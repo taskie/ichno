@@ -1,9 +1,10 @@
-use ignore;
-use sha1::Digest;
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
+
+use ignore;
+use sha1::Digest;
 
 use crate::object::{blob_from_path, tree_from_entries, FileMode, TreeEntry};
 
@@ -45,7 +46,8 @@ where
     F: FnMut(&Path, &TreeEntry, bool) -> (),
 {
     let mut resolving_map = BTreeMap::<PathBuf, TreeEntry>::new();
-    let mut walk_state = WalkState::new(path.as_ref().to_owned());
+    let is_dir = path.as_ref().is_dir();
+    let mut walk_state = WalkState::new(path.as_ref().to_owned(), is_dir);
     for result in walk {
         match result {
             Ok(entry) => {
@@ -74,8 +76,8 @@ struct WalkState<T> {
 }
 
 impl WalkState<PathBuf> {
-    pub fn new(root: PathBuf) -> WalkState<PathBuf> {
-        let parent_stack = vec![root.clone()];
+    pub fn new(root: PathBuf, is_dir: bool) -> WalkState<PathBuf> {
+        let parent_stack = if is_dir { vec![root.clone()] } else { Vec::new() };
         WalkState { root, parent_stack }
     }
 

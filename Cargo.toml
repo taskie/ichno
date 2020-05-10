@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 ignore = "0.4.15"
+log = "0.4.8"
 sha-1 = "0.8.2"
 
 [workspace]
