@@ -1,14 +1,10 @@
 [package]
-name = "treblo"
+name = "treblo-cli"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
 
 [dependencies]
+treblo = { version = "0.1.0", path = "../.." }
 ignore = "0.4.15"
 sha-1 = "0.8.2"
-
-[workspace]
-members = [
-  "crates/cli"
-]

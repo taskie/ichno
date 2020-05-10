@@ -219,6 +219,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "treblo-cli"
+version = "0.1.0"
+dependencies = [
+ "ignore",
+ "sha-1",
+ "treblo",
+]
+
+[[package]]
 name = "typenum"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

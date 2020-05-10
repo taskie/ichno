@@ -131,11 +131,7 @@ pub struct TreeEntry {
 
 impl TreeEntry {
     pub fn new(file_mode: FileMode, name: String, digest: Vec<u8>) -> TreeEntry {
-        TreeEntry {
-            file_mode,
-            name,
-            digest,
-        }
+        TreeEntry { file_mode, name, digest }
     }
 
     fn bytes<W>(&self, w: &mut W) -> Result<usize>
@@ -149,13 +145,7 @@ impl TreeEntry {
 impl Debug for TreeEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> result::Result<(), fmt::Error> {
         f.write_str(
-            format!(
-                "{:06o} {}\t{}",
-                self.file_mode.0,
-                to_hex_string(self.digest.as_slice()),
-                self.name
-            )
-            .as_str(),
+            format!("{:06o} {}\t{}", self.file_mode.0, to_hex_string(self.digest.as_slice()), self.name).as_str(),
         )?;
         Ok(())
     }

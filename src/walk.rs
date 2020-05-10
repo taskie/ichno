@@ -7,11 +7,10 @@ use std::{
 
 use crate::object::{blob_from_path, tree_from_entries, FileMode, TreeEntry};
 
-
 fn resolve<P, F>(resolving_map: &mut BTreeMap<PathBuf, TreeEntry>, parent: P, f: &mut F)
 where
     P: AsRef<Path>,
-    F: FnMut(&Path, &TreeEntry, bool) -> ()
+    F: FnMut(&Path, &TreeEntry, bool) -> (),
 {
     let mut paths = Vec::new();
     let mut entries = Vec::new();
@@ -42,7 +41,9 @@ where
 }
 
 pub fn walk<P: AsRef<Path>, F>(path: P, walk: ignore::Walk, f: &mut F)
-where F: FnMut(&Path, &TreeEntry, bool) -> () {
+where
+    F: FnMut(&Path, &TreeEntry, bool) -> (),
+{
     let mut resolving_map = BTreeMap::<PathBuf, TreeEntry>::new();
     let mut walk_state = WalkState::new(path.as_ref().to_owned());
     for result in walk {
@@ -75,10 +76,7 @@ struct WalkState<T> {
 impl WalkState<PathBuf> {
     pub fn new(root: PathBuf) -> WalkState<PathBuf> {
         let parent_stack = vec![root.clone()];
-        WalkState {
-            root,
-            parent_stack,
-        }
+        WalkState { root, parent_stack }
     }
 
     pub fn process<P, F>(&mut self, item: Option<P>, f: &mut F)
