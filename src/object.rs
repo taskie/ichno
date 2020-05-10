@@ -10,7 +10,6 @@ use std::{
 };
 
 use crate::hex::to_hex_string;
-use std::io::BufReader;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct FileMode(i32);
@@ -96,8 +95,7 @@ where
     } else {
         let mut f = File::open(path.as_ref())?;
         let metadata_n = f.metadata()?.len() as usize;
-        let mut br = BufReader::new(&mut f);
-        blob_from_read(w, &mut br, metadata_n)
+        blob_from_read(w, &mut f, metadata_n)
     }
 }
 
