@@ -1,16 +1,16 @@
+BIN := target/release/treblo
+
 .PHONY: build
 
-TREBLO_CLI := target/release/treblo-cli
-
 build:
-	cd crates/cli && cargo build --release
+	cargo build --release
 
 PREFIX := $(HOME)/.local
 
 .PHONY: install
 
 install: build
-	cp $(TREBLO_CLI) $(PREFIX)/bin/treblo
+	install -m755 $(BIN) $(PREFIX)/bin/treblo
 
 .PHONY: fmt
 
