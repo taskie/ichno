@@ -8,7 +8,10 @@ use digest::Digest;
 use ignore;
 use sha1;
 
-use crate::object::{blob_from_path, tree_from_entries, FileMode, TreeEntry};
+use crate::{
+    object::{blob_from_path, tree_from_entries, FileMode, TreeEntry},
+    path::PathWalkState,
+};
 use sha1::Sha1;
 
 pub trait Hasher: Write {
@@ -74,7 +77,7 @@ impl TrebloWalk {
     {
         let mut resolving_map = BTreeMap::<PathBuf, TreeEntry>::new();
         let is_dir = path.as_ref().is_dir();
-        let mut walk_state = WalkState::new(path.as_ref().to_owned(), is_dir);
+        let mut walk_state = PathWalkState::new(path.as_ref().to_owned(), is_dir);
         for result in walk {
             match result {
                 Ok(entry) => {
@@ -111,61 +114,6 @@ impl TrebloWalk {
         }
         if !self.blob_only {
             walk_state.process::<&Path, _>(None, &mut |p| self.resolve(&mut resolving_map, p, f));
-        }
-    }
-}
-
-struct WalkState<T> {
-    root: T,
-    parent_stack: Vec<T>,
-}
-
-impl WalkState<PathBuf> {
-    pub fn new(root: PathBuf, is_dir: bool) -> WalkState<PathBuf> {
-        let parent_stack = if is_dir { vec![root.clone()] } else { Vec::new() };
-        WalkState { root, parent_stack }
-    }
-
-    pub fn process<P, F>(&mut self, item: Option<P>, f: &mut F)
-    where
-        P: AsRef<Path>,
-        F: FnMut(&Path) -> (),
-    {
-        let parent = item.and_then(|p| p.as_ref().parent().map(|p| p.to_owned()));
-        if let Some(parent) = parent {
-            while !self.parent_stack.is_empty() {
-                let last = self.parent_stack.last().unwrap();
-                if &parent == last || parent.starts_with(last) {
-                    break;
-                }
-                f(&last);
-                self.parent_stack.pop();
-            }
-            let last = self.parent_stack.last();
-            let mut parents = Vec::new();
-            let mut cur = parent;
-            loop {
-                if last.is_some() && &cur == last.unwrap() {
-                    break;
-                }
-                if !cur.starts_with(&self.root) {
-                    break;
-                }
-                parents.push(cur.clone());
-                if let Some(next) = cur.parent() {
-                    cur = next.to_owned();
-                } else {
-                    break;
-                }
-            }
-            for pb in parents.iter().rev() {
-                self.parent_stack.push(pb.to_owned());
-            }
-        } else {
-            while !self.parent_stack.is_empty() {
-                let last = self.parent_stack.pop().unwrap();
-                f(&last);
-            }
         }
     }
 }

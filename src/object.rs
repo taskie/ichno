@@ -43,6 +43,10 @@ impl FileMode {
     pub fn as_i32(&self) -> i32 {
         self.0
     }
+
+    pub fn is_dir(&self) -> bool {
+        *self == FileMode::DIR
+    }
 }
 
 type Result<T> = result::Result<T, Error>;
