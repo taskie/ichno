@@ -1,11 +1,13 @@
 use std::{env, ffi::OsStr, io::stdout, path::PathBuf};
 
+use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
+use esegit::{hex::to_hex_string, walk, walk::Hasher};
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
 use std::io::{Error, Write};
 use structopt::{clap, StructOpt};
-use esegit::{hex::to_hex_string, walk, walk::Hasher};
+use twox_hash::XxHash64;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "treblo")]
@@ -79,6 +81,37 @@ impl Hasher for Sha256Holder {
     }
 }
 
+struct XxHash64Holder {
+    hash: XxHash64,
+    little_endian: bool,
+}
+
+impl Write for XxHash64Holder {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        use std::hash::Hasher;
+        Hasher::write(&mut self.hash, buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
+impl Hasher for XxHash64Holder {
+    fn result_vec(&mut self) -> Vec<u8> {
+        use std::hash::Hasher;
+        let mut w = vec![];
+        let x = Hasher::finish(&self.hash);
+        if self.little_endian {
+            w.write_u64::<LittleEndian>(x).unwrap();
+        } else {
+            w.write_u64::<BigEndian>(x).unwrap();
+        }
+        w
+    }
+}
+
 fn main() {
     let opt = Opt::from_args();
     let path_is_default: bool = opt.paths.is_empty();
@@ -109,6 +142,7 @@ fn main() {
                     use sha2::Digest;
                     || Box::new(Sha256Holder(Sha256::new()))
                 }
+                "xxhash64" => || Box::new(XxHash64Holder { hash: XxHash64::default(), little_endian: false }),
                 _ => panic!("unknown hasher: {}", opt.hasher),
             },
             blob_only: opt.blob_only,
