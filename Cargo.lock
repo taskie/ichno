@@ -138,6 +138,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "esegit"
+version = "0.1.0"
+dependencies = [
+ "digest",
+ "ignore",
+ "log",
+ "sha-1",
+]
+
+[[package]]
 name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -476,24 +486,14 @@ dependencies = [
 name = "treblo"
 version = "0.1.0"
 dependencies = [
- "digest",
- "ignore",
- "log",
- "sha-1",
-]
-
-[[package]]
-name = "treblo-cli"
-version = "0.1.0"
-dependencies = [
  "env_logger",
+ "esegit",
  "ignore",
  "serde",
  "serde_json",
  "sha-1",
  "sha2",
  "structopt",
- "treblo",
 ]
 
 [[package]]

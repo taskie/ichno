@@ -5,7 +5,7 @@ use sha1::Sha1;
 use sha2::Sha256;
 use std::io::{Error, Write};
 use structopt::{clap, StructOpt};
-use treblo::{hex::to_hex_string, walk, walk::Hasher};
+use esegit::{hex::to_hex_string, walk, walk::Hasher};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "treblo")]
