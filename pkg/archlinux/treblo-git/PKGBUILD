@@ -1,5 +1,5 @@
 pkgname=treblo-git
-pkgver=.r0.d8e344a
+pkgver=0.1.0
 pkgrel=1
 pkgdesc="Calculate hashes of Git tree and blob, outside working directory."
 arch=('x86_64')
@@ -15,7 +15,6 @@ sha1sums=('SKIP')
 
 build() {
   cd "$pkgname"
-  cd crates/cli
   if command -v rustup > /dev/null 2>&1; then
     RUSTFLAGS="-C target-cpu=native" rustup run nightly \
       cargo build --release
@@ -29,14 +28,14 @@ build() {
 
 pkgver() {
   cd "$pkgname"
-  local tag=$(git tag --sort=-v:refname | grep '^[0-9]' | head -1)
-  local commits_since=$(git rev-list $tag..HEAD --count)
-  echo "$tag.r$commits_since.$(git log --pretty=format:'%h' -n 1)"
+  local tag=$(git tag --sort=-v:refname | grep '^v[0-9]' | head -1)
+  local commits_since=$(git rev-list "${tag}..HEAD" --count)
+  echo "${tag##v}.r${commits_since}.$(git log --pretty=format:'%h' -n 1)"
 }
 
 package() {
   cd "$pkgname"
-  install -Dm755 "target/release/treblo-cli" "$pkgdir/usr/bin/treblo"
+  install -Dm755 "target/release/treblo" "$pkgdir/usr/bin/treblo"
   install -Dm644 "README.md" "$pkgdir/usr/share/doc/${pkgname}/README.md"
 
   install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
