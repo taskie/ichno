@@ -1,0 +1,8 @@
+/target
+
+/.idea
+*.iml
+
+tmp
+*.db
+.env*
