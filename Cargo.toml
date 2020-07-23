@@ -3,4 +3,5 @@ members = [
     "treblo",
     "treblo-cli",
     "ichno",
+    "ichno-cli",
 ]

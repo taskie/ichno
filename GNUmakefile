@@ -2,7 +2,7 @@
 
 build:
 	$(MAKE) -C treblo-cli build
-	$(MAKE) -C ichno build
+	$(MAKE) -C ichno-cli build
 
 PREFIX := $(HOME)/.local
 
@@ -10,7 +10,7 @@ PREFIX := $(HOME)/.local
 
 install: build
 	$(MAKE) -C treblo-cli install
-	$(MAKE) -C ichno install
+	$(MAKE) -C ichno-cli install
 
 .PHONY: fmt
 

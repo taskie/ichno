@@ -1,28 +1,16 @@
 #[macro_use]
-extern crate diesel;
-#[macro_use]
-extern crate diesel_migrations;
-#[macro_use]
 extern crate log;
 
 use std::{collections::HashSet, env, error::Error, ffi::OsStr};
+use std::{path::Path, process::exit};
 
 use chrono::Local;
 use diesel::{connection::Connection, sqlite::SqliteConnection};
 use dotenv;
 use ignore;
-use std::{path::Path, process::exit};
 use twox_hash::RandomXxHashBuilder64;
 
-use crate::{consts::DEFAULT_NAMESPACE_ID, sqlite::SqliteStats};
-
-pub mod consts;
-pub mod fs;
-pub mod models;
-pub mod schema;
-pub mod sqlite;
-
-embed_migrations!("migrations");
+use ichno::{consts::DEFAULT_NAMESPACE_ID, sqlite::{SqliteStats}, fs};
 
 fn main_with_error() -> Result<i32, Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -32,7 +20,7 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
     let conn = SqliteConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
     let db_path = Path::new(&database_url).canonicalize()?;
 
-    embedded_migrations::run(&conn).unwrap();
+    ichno::sqlite::migrate(&conn)?;
 
     let namespace_id = DEFAULT_NAMESPACE_ID;
     let mut ctx =

@@ -7,6 +7,13 @@ use crate::models::{
     StatInsertForm, StatUpdateForm,
 };
 
+embed_migrations!("migrations");
+
+pub fn migrate(conn: &SqliteConnection) -> Result<(), Box<dyn Error>> {
+    embedded_migrations::run(conn)?;
+    Ok(())
+}
+
 pub struct SqliteObjects;
 
 impl SqliteObjects {

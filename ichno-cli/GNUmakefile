@@ -1,4 +1,5 @@
-BIN := ../target/release/ichno
+NAME := ichno
+BIN := ../target/release/$(NAME)
 
 .PHONY: build
 
@@ -10,7 +11,7 @@ PREFIX := $(HOME)/.local
 .PHONY: install
 
 install: build
-	install -m755 $(BIN) $(PREFIX)/bin/ichno
+	install -m755 $(BIN) $(PREFIX)/bin/$(NAME)
 
 .PHONY: fmt
 
