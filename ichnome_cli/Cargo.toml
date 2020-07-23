@@ -1,0 +1,23 @@
+[package]
+name = "ichnome_cli"
+version = "0.1.0"
+authors = ["taskie <t@skie.jp>"]
+edition = "2018"
+
+[[bin]]
+path = "src/main.rs"
+name = "ichnome"
+doc = false
+
+[dependencies]
+chrono = "0.4.1"
+diesel = { version = "1.4.5", features = ["extras", "mysql", "sqlite"] }
+dotenv = "0.15.0"
+env_logger = "0.7.1"
+ichno = { version = "0.1.0", path = "../ichno" }
+ichnome = { version = "0.1.0", path = "../ichnome" }
+ignore = "0.4.15"
+ssh2 = "0.8.2"
+structopt = "0.3.14"
+twox-hash = "1.5.0"
+log = "0.4.8"

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS `namespaces` (
     `url` VARCHAR(512) NOT NULL,
     `description` VARCHAR(1024) NOT NULL,
     `history_id` INTEGER NOT NULL,  -- FK,
+    `version` INTEGER NOT NULL,     -- cached from history
     `status` INTEGER NOT NULL,      -- cached from history
     `mtime` DATETIME,               -- cached from history
     `object_id` INTEGER,            -- cached from history, FK

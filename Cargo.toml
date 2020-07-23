@@ -4,4 +4,6 @@ members = [
     "treblo_cli",
     "ichno",
     "ichno_cli",
+    "ichnome",
+    "ichnome_cli",
 ]
