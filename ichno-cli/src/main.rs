@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use std::{collections::HashSet, env, error::Error, ffi::OsStr};
-use std::{path::Path, process::exit};
+use std::{collections::HashSet, env, error::Error, ffi::OsStr, path::Path, process::exit};
 
 use chrono::Local;
 use diesel::{connection::Connection, sqlite::SqliteConnection};
@@ -10,7 +9,7 @@ use dotenv;
 use ignore;
 use twox_hash::RandomXxHashBuilder64;
 
-use ichno::{consts::DEFAULT_NAMESPACE_ID, sqlite::{SqliteStats}, fs};
+use ichno::{consts::DEFAULT_NAMESPACE_ID, fs, sqlite::SqliteStats};
 
 fn main_with_error() -> Result<i32, Box<dyn Error>> {
     dotenv::dotenv().ok();

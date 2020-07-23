@@ -1,12 +1,12 @@
 use std::{env, ffi::OsStr, io::stdout, path::PathBuf};
 
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
-use treblo::{hex::to_hex_string, walk, walk::Hasher};
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
 use std::io::{Error, Write};
 use structopt::{clap, StructOpt};
+use treblo::{hex::to_hex_string, walk, walk::Hasher};
 use twox_hash::XxHash64;
 
 #[derive(Debug, StructOpt)]
