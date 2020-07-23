@@ -1,4 +1,4 @@
-NAME := ichno
+NAME := treblo
 BIN := ../target/release/$(NAME)
 
 .PHONY: build
@@ -12,13 +12,3 @@ PREFIX := $(HOME)/.local
 
 install: build
 	install -m755 $(BIN) $(PREFIX)/bin/$(NAME)
-
-.PHONY: fmt
-
-fmt:
-	cargo fmt
-
-.PHONY: fix
-
-fix:
-	cargo fix --allow-staged

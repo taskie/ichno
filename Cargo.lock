@@ -308,7 +308,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ichno-cli"
+name = "ichno_cli"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -847,7 +847,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "treblo-cli"
+name = "treblo_cli"
 version = "0.1.1"
 dependencies = [
  "byteorder",

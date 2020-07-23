@@ -1,23 +1,27 @@
 .PHONY: build
 
 build:
-	$(MAKE) -C treblo-cli build
-	$(MAKE) -C ichno-cli build
+	cargo build --release
 
 PREFIX := $(HOME)/.local
 
 .PHONY: install
 
 install: build
-	$(MAKE) -C treblo-cli install
-	$(MAKE) -C ichno-cli install
+	$(MAKE) -C treblo_cli install
+	$(MAKE) -C ichno_cli install
 
 .PHONY: fmt
 
 fmt:
-	cargo fmt
+	cargo fmt --all
 
 .PHONY: fix
 
 fix:
 	cargo fix --allow-staged
+
+.PHONY: doc
+
+doc:
+	cargo doc --open
