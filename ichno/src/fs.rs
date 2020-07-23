@@ -87,7 +87,7 @@ fn new_updated_metadata_if_needed(stat: &Option<Stat>, path: &Path) -> Result<Op
             }
             hasher.write(&buf[0..n])?;
         }
-        esegit::hex::to_hex_string(hasher.fixed_result().as_slice())
+        treblo::hex::to_hex_string(hasher.fixed_result().as_slice())
     };
     if let Some(stat) = stat {
         if let Some(old_digest) = stat.digest.clone() {
@@ -254,8 +254,8 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
         let mut object = SqliteObjects::find_by_digest(conn, &metadata.digest)?;
         if object == None {
             let mut hasher = Sha1::default();
-            esegit::object::blob_from_path(&mut hasher, path_ref)?;
-            let git_object_id = esegit::hex::to_hex_string(hasher.fixed_result().as_slice());
+            treblo::object::blob_from_path(&mut hasher, path_ref)?;
+            let git_object_id = treblo::hex::to_hex_string(hasher.fixed_result().as_slice());
             object = Some(SqliteObjects::insert_and_find(
                 conn,
                 &ObjectInsertForm {

@@ -1,16 +1,17 @@
+NAME := treblo
+BIN := ../target/release/$(NAME)
+
 .PHONY: build
 
 build:
-	$(MAKE) -C treblo build
-	$(MAKE) -C ichno build
+	cargo build --release
 
 PREFIX := $(HOME)/.local
 
 .PHONY: install
 
 install: build
-	$(MAKE) -C treblo install
-	$(MAKE) -C ichno install
+	install -m755 $(BIN) $(PREFIX)/bin/$(NAME)
 
 .PHONY: fmt
 

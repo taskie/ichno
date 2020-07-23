@@ -1,11 +1,11 @@
 [package]
-name = "treblo"
+name = "treblo-cli"
 version = "0.1.1"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
 
 [[bin]]
-path = "crates/core/main.rs"
+path = "src/main.rs"
 name = "treblo"
 
 [dependencies]
@@ -18,9 +18,4 @@ sha-1 = "0.8"
 sha2 = "0.8"
 structopt = "0.3.14"
 twox-hash = "1.5.0"
-esegit = { version = "0.1.0", path = "crates/esegit" }
-
-[workspace]
-members = [
-  "crates/esegit"
-]
+treblo = { version = "0.1.0", path = "../treblo" }

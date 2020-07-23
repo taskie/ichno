@@ -10,7 +10,7 @@ diesel = { version = "1.4.5", features = ["extras", "sqlite"] }
 diesel_migrations = "1.4.0"
 dotenv = "0.15.0"
 env_logger = "0.7.1"
-esegit = { version = "0.1.0", path = "../../treblo/crates/esegit" }
+treblo = { version = "0.1.0", path = "../treblo" }
 ignore = "0.4.15"
 log = "0.4.8"
 sha-1 = "0.8"

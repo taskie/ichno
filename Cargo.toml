@@ -1,4 +1,6 @@
 [workspace]
 members = [
+    "treblo",
+    "treblo-cli",
     "ichno",
 ]

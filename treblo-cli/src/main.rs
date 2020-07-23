@@ -1,7 +1,7 @@
 use std::{env, ffi::OsStr, io::stdout, path::PathBuf};
 
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
-use esegit::{hex::to_hex_string, walk, walk::Hasher};
+use treblo::{hex::to_hex_string, walk, walk::Hasher};
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
