@@ -172,6 +172,14 @@ impl SqliteStats {
         Ok(q.first::<Stat>(conn).optional()?)
     }
 
+    pub fn select(conn: &SqliteConnection, namespace_id: &str) -> Result<Vec<Stat>, Box<dyn Error>> {
+        use crate::schema::stats::dsl;
+        let q =
+            dsl::stats.filter(dsl::namespace_id.eq(namespace_id)).order(dsl::namespace_id.asc()).order(dsl::path.asc());
+        let stats = q.load::<Stat>(conn)?;
+        Ok(stats)
+    }
+
     pub fn insert(conn: &SqliteConnection, stat_form: &StatInsertForm) -> Result<(), Box<dyn Error>> {
         use crate::schema::stats::dsl;
         let q = diesel::insert_into(dsl::stats).values(stat_form);

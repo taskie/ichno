@@ -5,15 +5,16 @@ extern crate diesel_migrations;
 #[macro_use]
 extern crate log;
 
-use std::{env, error::Error, ffi::OsStr};
+use std::{collections::HashSet, env, error::Error, ffi::OsStr};
 
 use chrono::Local;
 use diesel::{connection::Connection, sqlite::SqliteConnection};
 use dotenv;
 use ignore;
 use std::{path::Path, process::exit};
+use twox_hash::RandomXxHashBuilder64;
 
-use crate::consts::DEFAULT_NAMESPACE_ID;
+use crate::{consts::DEFAULT_NAMESPACE_ID, sqlite::SqliteStats};
 
 pub mod consts;
 pub mod fs;
@@ -37,22 +38,33 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
     let mut ctx =
         fs::Context { connection: &conn, db_path: &db_path, namespace_id, namespace: None, current_time: Local::now() };
     let path = Path::new(".");
-    let abs_path = path.canonicalize()?;
 
     let w = {
-        let mut wb = ignore::WalkBuilder::new(&abs_path);
+        let mut wb = ignore::WalkBuilder::new(&path);
         wb.filter_entry(|p| p.file_name() != OsStr::new(".git") && p.file_name() != OsStr::new("ichno.db"));
         wb.build()
     };
     fs::pre_process(&mut ctx)?;
+    let mut path_set: HashSet<_, RandomXxHashBuilder64> = Default::default();
     for result in w {
         match result {
             Ok(entry) => {
                 if entry.metadata().unwrap().is_file() {
-                    fs::upsert_with_file(&ctx, namespace_id, entry.path())?;
+                    let path = fs::upsert_with_file(&ctx, namespace_id, entry.path())?.path;
+                    path_set.insert(path);
                 }
             }
             Err(err) => warn!("{}", err),
+        }
+    }
+    let stats = SqliteStats::select(&conn, namespace_id)?;
+    for stat in stats.iter() {
+        if path_set.contains(&stat.path) {
+            continue;
+        }
+        let path = Path::new(&stat.path);
+        if !path.exists() {
+            fs::remove_with_file(&ctx, namespace_id, path)?;
         }
     }
     fs::post_process(&mut ctx)?;

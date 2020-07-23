@@ -177,6 +177,64 @@ pub fn post_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn E
     Ok(())
 }
 
+pub fn remove_with_file<Tz: TimeZone, P: AsRef<Path>>(
+    ctx: &Context<Tz>,
+    namespace_id: &str,
+    path: P,
+) -> Result<Option<Stat>, Box<dyn Error>> {
+    let conn = ctx.connection;
+    let base_path = ctx.base_directory().unwrap();
+    let path = base_path.join(path);
+    let path_ref = path.strip_prefix(base_path)?;
+    let path_str = path_ref.to_str().expect(&format!("invalid path string"));
+    debug!("* {}", path_str);
+    let old_stat = SqliteStats::find_by_path(conn, namespace_id, path_str)?;
+    if let Some(old_stat) = old_stat {
+        if old_stat.status == Status::DISABLED as i32 {
+            return Ok(Some(old_stat));
+        }
+        let now = ctx.naive_current_time();
+        let last_history = SqliteHistories::find_latest_by_path(conn, namespace_id, path_str)?;
+        let version = match last_history {
+            Some(h) => h.version + 1,
+            None => 1,
+        };
+        let history = SqliteHistories::insert_and_find(
+            conn,
+            &HistoryInsertForm {
+                namespace_id,
+                path: path_str,
+                version,
+                status: Status::DISABLED as i32,
+                mtime: None,
+                object_id: None,
+                digest: None,
+                created_at: now,
+                updated_at: now,
+            },
+        )?;
+        trace!("- history: {:?}", history);
+        let stat = SqliteStats::update_and_find(
+            conn,
+            old_stat.id,
+            &StatUpdateForm {
+                history_id: history.id,
+                status: history.status,
+                mtime: history.mtime,
+                object_id: history.object_id,
+                digest: None,
+                size: None,
+                fast_digest: None,
+                updated_at: now,
+            },
+        )?;
+        trace!("- stat: {:?}", stat);
+        Ok(Some(stat))
+    } else {
+        Ok(None)
+    }
+}
+
 pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
     ctx: &Context<Tz>,
     namespace_id: &str,
@@ -184,8 +242,8 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
 ) -> Result<Stat, Box<dyn Error>> {
     let conn = ctx.connection;
     let base_path = ctx.base_directory().unwrap();
-    let path_ref = path.as_ref();
-    let path_ref = path_ref.strip_prefix(base_path)?;
+    let path = path.as_ref().canonicalize()?;
+    let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
     debug!("* {}", path_str);
     let old_stat = SqliteStats::find_by_path(conn, namespace_id, path_str)?;

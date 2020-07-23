@@ -102,6 +102,7 @@ pub struct NamespaceInsertForm<'a> {
 
 #[derive(Debug, AsChangeset)]
 #[table_name = "namespaces"]
+#[changeset_options(treat_none_as_null = "true")]
 pub struct NamespaceUpdateForm<'a> {
     pub url: &'a str,
     pub description: &'a str,
@@ -180,6 +181,7 @@ pub struct StatInsertForm<'a> {
 
 #[derive(Debug, AsChangeset)]
 #[table_name = "stats"]
+#[changeset_options(treat_none_as_null = "true")]
 pub struct StatUpdateForm<'a> {
     pub history_id: i32,
 
