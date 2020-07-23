@@ -1,26 +1,11 @@
 [package]
-name = "treblo"
-version = "0.1.1"
+name = "esegit"
+version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
 
-[[bin]]
-path = "crates/core/main.rs"
-name = "treblo"
-
 [dependencies]
-byteorder = "1.3.4"
-env_logger = "0.7.1"
+digest = "0.8"
 ignore = "0.4.15"
-serde = { version = "1.0.110", features = ["derive"] }
-serde_json = "1.0.53"
+log = "0.4.8"
 sha-1 = "0.8"
-sha2 = "0.8"
-structopt = "0.3.14"
-twox-hash = "1.5.0"
-esegit = { version = "0.1.0", path = "crates/esegit" }
-
-[workspace]
-members = [
-  "crates/esegit"
-]
