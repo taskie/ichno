@@ -1,4 +1,33 @@
 table! {
+    attributes (id) {
+        id -> Integer,
+        entity_type -> Integer,
+        entity_id -> Integer,
+        namespace_id -> Nullable<Varchar>,
+        path -> Nullable<Varchar>,
+        version -> Nullable<Integer>,
+        digest -> Nullable<Char>,
+        key -> Varchar,
+        value_object_id -> Integer,
+        value_digest -> Char,
+        value_content_type -> Integer,
+        status -> Integer,
+        created_at -> Datetime,
+        updated_at -> Datetime,
+    }
+}
+
+table! {
+    contents (object_id) {
+        object_id -> Integer,
+        digest -> Char,
+        body -> Blob,
+        created_at -> Datetime,
+        updated_at -> Datetime,
+    }
+}
+
+table! {
     histories (id) {
         id -> Integer,
         namespace_id -> Varchar,
@@ -60,4 +89,11 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(histories, namespaces, objects, stats,);
+allow_tables_to_appear_in_same_query!(
+    attributes,
+    contents,
+    histories,
+    namespaces,
+    objects,
+    stats,
+);
