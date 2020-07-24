@@ -23,6 +23,12 @@ impl MysqlObjects {
         Ok(q.first::<Object>(conn).optional()?)
     }
 
+    pub fn select(conn: &MysqlConnection, ids: &Vec<i32>) -> Result<Vec<Object>, Box<dyn Error>> {
+        use crate::db::schema::objects::dsl;
+        let q = dsl::objects.filter(dsl::id.eq_any(ids));
+        Ok(q.load::<Object>(conn)?)
+    }
+
     pub fn find_by_digest(conn: &MysqlConnection, digest: &str) -> Result<Option<Object>, Box<dyn Error>> {
         use crate::db::schema::objects::dsl;
         let q = dsl::objects.filter(dsl::digest.eq(digest));
@@ -94,6 +100,23 @@ impl MysqlHistories {
         Ok(histories)
     }
 
+    pub fn select_by_object_id(
+        conn: &MysqlConnection,
+        namespace_id: Option<&str>,
+        object_id: i32,
+    ) -> Result<Vec<History>, Box<dyn Error>> {
+        use crate::db::schema::histories::dsl;
+        if let Some(namespace_id) = namespace_id {
+            let expr = dsl::object_id.eq(object_id).and(dsl::namespace_id.eq(namespace_id));
+            let q = dsl::histories.filter(expr).order(dsl::namespace_id.asc()).order(dsl::path.asc());
+            Ok(q.load::<History>(conn)?)
+        } else {
+            let expr = dsl::object_id.eq(object_id);
+            let q = dsl::histories.filter(expr).order(dsl::namespace_id.asc()).order(dsl::path.asc());
+            Ok(q.load::<History>(conn)?)
+        }
+    }
+
     pub fn insert(conn: &MysqlConnection, history_form: &HistoryInsertForm) -> Result<(), Box<dyn Error>> {
         use crate::db::schema::histories::dsl;
         let q = diesel::insert_into(dsl::histories).values(history_form);
@@ -119,6 +142,18 @@ impl MysqlNamespaces {
         use crate::db::schema::namespaces::dsl;
         let q = dsl::namespaces.find(id);
         Ok(q.first::<Namespace>(conn).optional()?)
+    }
+
+    pub fn select(conn: &MysqlConnection, ids: &Vec<&str>) -> Result<Vec<Namespace>, Box<dyn Error>> {
+        use crate::db::schema::namespaces::dsl;
+        let q = dsl::namespaces.filter(dsl::id.eq_any(ids));
+        Ok(q.load::<Namespace>(conn)?)
+    }
+
+    pub fn select_all(conn: &MysqlConnection) -> Result<Vec<Namespace>, Box<dyn Error>> {
+        use crate::db::schema::namespaces::dsl;
+        let q = dsl::namespaces;
+        Ok(q.load::<Namespace>(conn)?)
     }
 
     pub fn insert(conn: &MysqlConnection, namespace_form: &NamespaceInsertForm) -> Result<(), Box<dyn Error>> {
@@ -179,12 +214,28 @@ impl MysqlStats {
         Ok(q.first::<Stat>(conn).optional()?)
     }
 
-    pub fn select(conn: &MysqlConnection, namespace_id: &str) -> Result<Vec<Stat>, Box<dyn Error>> {
+    pub fn select_by_namespace_id(conn: &MysqlConnection, namespace_id: &str) -> Result<Vec<Stat>, Box<dyn Error>> {
         use crate::db::schema::stats::dsl;
         let q =
             dsl::stats.filter(dsl::namespace_id.eq(namespace_id)).order(dsl::namespace_id.asc()).order(dsl::path.asc());
-        let stats = q.load::<Stat>(conn)?;
-        Ok(stats)
+        Ok(q.load::<Stat>(conn)?)
+    }
+
+    pub fn select_by_object_id(
+        conn: &MysqlConnection,
+        namespace_id: Option<&str>,
+        object_id: i32,
+    ) -> Result<Vec<Stat>, Box<dyn Error>> {
+        use crate::db::schema::stats::dsl;
+        if let Some(namespace_id) = namespace_id {
+            let expr = dsl::object_id.eq(object_id).and(dsl::namespace_id.eq(namespace_id));
+            let q = dsl::stats.filter(expr).order(dsl::namespace_id.asc()).order(dsl::path.asc());
+            Ok(q.load::<Stat>(conn)?)
+        } else {
+            let expr = dsl::object_id.eq(object_id);
+            let q = dsl::stats.filter(expr).order(dsl::namespace_id.asc()).order(dsl::path.asc());
+            Ok(q.load::<Stat>(conn)?)
+        }
     }
 
     pub fn insert(conn: &MysqlConnection, stat_form: &StatInsertForm) -> Result<(), Box<dyn Error>> {

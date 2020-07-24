@@ -7,4 +7,5 @@ members = [
     "ichno_cli",
     "ichnome",
     "ichnome_cli",
+    "ichnome_web",
 ]

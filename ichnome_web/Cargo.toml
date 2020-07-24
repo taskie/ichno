@@ -1,5 +1,5 @@
 [package]
-name = "ichnome_cli"
+name = "ichnome_web"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
@@ -7,18 +7,18 @@ publish = false
 
 [[bin]]
 path = "src/main.rs"
-name = "ichnome"
+name = "ichnome-web"
 doc = false
 
 [dependencies]
+actix-web = "2.0"
+actix-rt = "1.1.1"
 chrono = { version = "0.4.1", features = ["serde"] }
 diesel = { version = "1.4.5", features = ["extras", "mysql", "sqlite"] }
 dotenv = "0.15.0"
 env_logger = "0.7.1"
-ichno = { path = "../ichno" }
 ichnome = { path = "../ichnome" }
-ignore = "0.4.15"
 log = "0.4.8"
-ssh2 = "0.8.2"
+serde = { version = "1.0.110", features = ["derive"] }
 structopt = "0.3.14"
-twox-hash = "1.5.0"
+url = "2.1.1"

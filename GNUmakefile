@@ -7,10 +7,11 @@ PREFIX := $(HOME)/.local
 
 .PHONY: install
 
-install: build
+install:
 	$(MAKE) -C treblo_cli install
 	$(MAKE) -C ichno_cli install
 	$(MAKE) -C ichnome_cli install
+	$(MAKE) -C ichnome_web install
 
 .PHONY: fmt
 

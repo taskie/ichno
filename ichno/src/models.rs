@@ -1,8 +1,9 @@
 use chrono::NaiveDateTime;
+use serde::Serialize;
 
 use crate::db::schema::{histories, namespaces, objects, stats};
 
-#[derive(Clone, Debug, PartialEq, Identifiable, Queryable)]
+#[derive(Clone, Debug, PartialEq, Serialize, Identifiable, Queryable)]
 #[table_name = "objects"]
 pub struct Object {
     pub id: i32,
@@ -22,7 +23,7 @@ pub struct ObjectInsertForm<'a> {
     pub git_object_id: &'a str,
 }
 
-#[derive(Clone, Debug, PartialEq, Identifiable, Queryable)]
+#[derive(Clone, Debug, PartialEq, Serialize, Identifiable, Queryable)]
 #[table_name = "histories"]
 pub struct History {
     pub id: i32,
@@ -56,7 +57,7 @@ pub struct HistoryInsertForm<'a> {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Clone, Debug, PartialEq, Identifiable, Queryable)]
+#[derive(Clone, Debug, PartialEq, Serialize, Identifiable, Queryable)]
 #[table_name = "namespaces"]
 pub struct Namespace {
     pub id: String,
@@ -105,7 +106,7 @@ pub struct NamespaceInsertForm<'a> {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Clone, Debug, PartialEq, Identifiable, Queryable)]
+#[derive(Clone, Debug, PartialEq, Serialize, Identifiable, Queryable)]
 #[table_name = "stats"]
 pub struct Stat {
     pub id: i32,

@@ -15,6 +15,6 @@ mod models;
 
 pub use constants::{NamespaceType, Status, DEFAULT_NAMESPACE_ID, META_NAMESPACE_ID};
 pub use models::{
-    HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, ObjectInsertForm, Stat, StatInsertForm,
-    StatUpdateForm,
+    History, HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, Object, ObjectInsertForm, Stat,
+    StatInsertForm, StatUpdateForm,
 };

@@ -7,8 +7,8 @@ use chrono::Local;
 use diesel::{connection::Connection, sqlite::SqliteConnection};
 use dotenv;
 use ignore;
-use twox_hash::RandomXxHashBuilder64;
 use structopt::{clap, StructOpt};
+use twox_hash::RandomXxHashBuilder64;
 
 use ichno::{db::SqliteStats, file, DEFAULT_NAMESPACE_ID};
 
