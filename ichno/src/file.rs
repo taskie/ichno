@@ -116,7 +116,11 @@ impl<'c, 'a, Tz: TimeZone> Context<'c, 'a, Tz> {
     }
 
     pub fn base_directory(&self) -> Option<PathBuf> {
-        self.namespace.as_ref().and_then(|ns| Url::parse(&ns.url).ok()).map(|url| PathBuf::from(url.path()))
+        self.namespace
+            .as_ref()
+            .and_then(|ns| Url::parse(&ns.url).ok())
+            .map(|url| PathBuf::from(url.path()))
+            .and_then(|p| p.parent().map(PathBuf::from))
     }
 }
 
@@ -129,8 +133,7 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
         ctx.namespace = Some(namespace);
     } else {
         let abs_db_path = ctx.db_path.canonicalize()?;
-        let base_dir = abs_db_path.parent().unwrap();
-        let url = format!("file://{}", base_dir.to_str().unwrap());
+        let url = format!("file://{}", abs_db_path.to_str().unwrap());
         namespace = Some(SqliteNamespaces::insert_and_find(
             &conn,
             &NamespaceInsertForm {
@@ -157,7 +160,7 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
 
 pub fn post_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Error>> {
     let meta_namespace_id = META_NAMESPACE_ID;
-    let stat = upsert_with_file(ctx, meta_namespace_id, ctx.db_path)?;
+    let stat = upsert_with_file_without_canonicalization(ctx, meta_namespace_id, ctx.namespace_id, ctx.db_path)?;
     let old_namespace = ctx.namespace.clone().unwrap();
     let namespace = SqliteNamespaces::update_and_find(
         ctx.connection,
@@ -188,7 +191,7 @@ pub fn remove_with_file<Tz: TimeZone, P: AsRef<Path>>(
 ) -> Result<Option<Stat>, Box<dyn Error>> {
     let conn = ctx.connection;
     let base_path = ctx.base_directory().unwrap();
-    let path = base_path.join(path);
+    let path = if path.as_ref().is_absolute() { PathBuf::from(path.as_ref()) } else { base_path.join(path) };
     let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
     debug!("* {}", path_str);
@@ -245,21 +248,30 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
     namespace_id: &str,
     path: P,
 ) -> Result<Stat, Box<dyn Error>> {
-    let conn = ctx.connection;
     let base_path = ctx.base_directory().unwrap();
-    let path = path.as_ref().canonicalize()?;
+    let path = if path.as_ref().is_absolute() { PathBuf::from(path.as_ref()) } else { base_path.join(path) };
     let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
+    upsert_with_file_without_canonicalization(ctx, namespace_id, path_str, path_ref)
+}
+
+pub(crate) fn upsert_with_file_without_canonicalization<Tz: TimeZone>(
+    ctx: &Context<Tz>,
+    namespace_id: &str,
+    path_str: &str,
+    file_path: &Path,
+) -> Result<Stat, Box<dyn Error>> {
+    let conn = ctx.connection;
     debug!("* {}", path_str);
     let old_stat = SqliteStats::find_by_path(conn, namespace_id, path_str)?;
     let now = ctx.naive_current_time();
-    let metadata = new_updated_metadata_if_needed(&old_stat, path_ref)?;
+    let metadata = new_updated_metadata_if_needed(&old_stat, file_path)?;
     trace!("- updated_metadata: {:?}", metadata);
     if let Some(metadata) = metadata {
         let mut object = SqliteObjects::find_by_digest(conn, &metadata.digest)?;
         if object == None {
             let mut hasher = Sha1::default();
-            treblo::object::blob_from_path(&mut hasher, path_ref)?;
+            treblo::object::blob_from_path(&mut hasher, file_path)?;
             let git_object_id = treblo::hex::to_hex_string(hasher.fixed_result().as_slice());
             object = Some(SqliteObjects::insert_and_find(
                 conn,
