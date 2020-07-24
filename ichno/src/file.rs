@@ -319,7 +319,7 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
                     status: history.status,
                     mtime: history.mtime,
                     object_id: history.object_id,
-                    digest: Some(object.digest),
+                    digest: Some(&object.digest),
                     size: Some(object.size),
                     fast_digest: Some(object.fast_digest),
                     created_at: now,

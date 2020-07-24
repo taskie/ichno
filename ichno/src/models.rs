@@ -94,7 +94,7 @@ pub struct NamespaceInsertForm<'a> {
     pub mtime: Option<NaiveDateTime>,
     pub object_id: Option<i32>,
 
-    pub digest: Option<String>,
+    pub digest: Option<&'a str>,
     pub size: Option<i64>,
     pub fast_digest: Option<i64>,
 
@@ -177,7 +177,7 @@ pub struct StatInsertForm<'a> {
     pub mtime: Option<NaiveDateTime>,
     pub object_id: Option<i32>,
 
-    pub digest: Option<String>,
+    pub digest: Option<&'a str>,
     pub size: Option<i64>,
     pub fast_digest: Option<i64>,
 
