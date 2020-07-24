@@ -3,18 +3,19 @@ name = "ichnome"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
+publish = false
 
 [dependencies]
 chrono = "0.4.1"
 diesel = { version = "1.4.5", features = ["extras", "mysql", "sqlite"] }
 diesel_migrations = "1.4.0"
-ichno = { version = "0.1.0", path = "../ichno" }
+ichno = { path = "../ichno" }
 log = "0.4.8"
 optional_derive = { path = "../optional_derive" }
 sha-1 = "0.8"
 sha2 = "0.8"
 ssh2 = "0.8.2"
 tempfile = "3.1.0"
-treblo = { version = "0.1.0", path = "../treblo" }
+treblo = { path = "../treblo" }
 twox-hash = "1.5.0"
 url = "2.1.1"
