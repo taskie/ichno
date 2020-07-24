@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "optional_derive",
     "treblo",
     "treblo_cli",
     "ichno",
