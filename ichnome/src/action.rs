@@ -10,7 +10,7 @@ use sha1::Sha1;
 use url::Url;
 
 use crate::{
-    constants::META_NAMESPACE_ID,
+    constants::{NamespaceType, META_NAMESPACE_ID},
     db::{MysqlHistories, MysqlNamespaces, MysqlObjects, MysqlStats},
     file,
     file::FileMetadata,
@@ -36,7 +36,6 @@ pub struct RegisterRequest<Tz: TimeZone> {
 
 #[derive(Debug)]
 pub struct RegisterOptions {
-    pub description: Option<String>,
     pub force: bool,
 }
 
@@ -47,7 +46,7 @@ pub struct RegisterResponse {
 
 impl Default for RegisterOptions {
     fn default() -> Self {
-        RegisterOptions { description: None, force: false }
+        RegisterOptions { force: false }
     }
 }
 
@@ -55,7 +54,7 @@ pub fn register<Tz: TimeZone>(ctx: &Context, req: &RegisterRequest<Tz>) -> Resul
     let conn = ctx.connection;
     Url::parse(&req.url)?;
     let namespace = MysqlNamespaces::find(conn, &req.namespace_id)?;
-    let namespace = if let Some(namespace) = namespace {
+    let namespace = if let Some(_) = namespace {
         if !req.options.force {
             panic!(format!("namespace duplicated: {}", req.namespace_id));
         }
@@ -64,10 +63,10 @@ pub fn register<Tz: TimeZone>(ctx: &Context, req: &RegisterRequest<Tz>) -> Resul
             &req.namespace_id,
             &NamespaceUpdateForm {
                 url: &req.url,
-                description: req.options.description.as_ref().unwrap_or(&namespace.description),
-                history_id: -1,
-                version: -1,
-                status: Status::DISABLED as i32,
+                type_: NamespaceType::REMOTE as i32,
+                history_id: None,
+                version: None,
+                status: None,
                 mtime: None,
                 object_id: None,
                 digest: None,
@@ -82,10 +81,10 @@ pub fn register<Tz: TimeZone>(ctx: &Context, req: &RegisterRequest<Tz>) -> Resul
             &NamespaceInsertForm {
                 id: &req.namespace_id,
                 url: &req.url,
-                description: req.options.description.as_ref().unwrap_or(&"".to_owned()),
-                history_id: -1,
-                version: -1,
-                status: Status::DISABLED as i32,
+                type_: NamespaceType::REMOTE as i32,
+                history_id: None,
+                version: None,
+                status: None,
                 mtime: None,
                 object_id: None,
                 digest: None,
@@ -260,10 +259,10 @@ fn load_local_db<Tz: TimeZone>(
         global_namespace_id,
         &NamespaceUpdateForm {
             url: &namespace.url,
-            description: &namespace.description,
-            history_id: stat.history_id,
-            version: stat.version,
-            status: stat.status,
+            type_: namespace.type_,
+            history_id: Some(stat.history_id),
+            version: Some(stat.version),
+            status: Some(stat.status),
             mtime: stat.mtime,
             object_id: stat.object_id,
             digest: stat.digest.as_ref().map(|s| s.as_str()),

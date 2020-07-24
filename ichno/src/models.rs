@@ -62,12 +62,12 @@ pub struct Namespace {
     pub id: String,
 
     pub url: String,
-    pub description: String,
+    pub type_: i32,
 
-    pub hisotry_id: i32,
+    pub hisotry_id: Option<i32>,
 
-    pub version: i32,
-    pub status: i32,
+    pub version: Option<i32>,
+    pub status: Option<i32>,
     pub mtime: Option<NaiveDateTime>,
     pub object_id: Option<i32>,
 
@@ -85,12 +85,12 @@ pub struct NamespaceInsertForm<'a> {
     pub id: &'a str,
 
     pub url: &'a str,
-    pub description: &'a str,
+    pub type_: i32,
 
-    pub history_id: i32,
+    pub history_id: Option<i32>,
 
-    pub version: i32,
-    pub status: i32,
+    pub version: Option<i32>,
+    pub status: Option<i32>,
     pub mtime: Option<NaiveDateTime>,
     pub object_id: Option<i32>,
 
@@ -107,12 +107,12 @@ pub struct NamespaceInsertForm<'a> {
 #[changeset_options(treat_none_as_null = "true")]
 pub struct NamespaceUpdateForm<'a> {
     pub url: &'a str,
-    pub description: &'a str,
+    pub type_: i32,
 
-    pub history_id: i32,
+    pub history_id: Option<i32>,
 
-    pub version: i32,
-    pub status: i32,
+    pub version: Option<i32>,
+    pub status: Option<i32>,
     pub mtime: Option<NaiveDateTime>,
     pub object_id: Option<i32>,
 
@@ -127,7 +127,7 @@ impl<'a> From<&'a Namespace> for NamespaceUpdateForm<'a> {
     fn from(src: &'a Namespace) -> Self {
         NamespaceUpdateForm {
             url: &src.url,
-            description: &src.description,
+            type_: src.type_,
             history_id: src.hisotry_id,
             version: src.version,
             status: src.status,

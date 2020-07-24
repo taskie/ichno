@@ -35,9 +35,6 @@ pub struct Register {
     pub url: String,
 
     #[structopt(short, long)]
-    pub description: Option<String>,
-
-    #[structopt(short, long)]
     pub force: bool,
 }
 
@@ -64,7 +61,7 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
                     namespace_id: register.namespace_id,
                     url: register.url,
                     current_time,
-                    options: RegisterOptions { description: register.description, force: register.force },
+                    options: RegisterOptions { force: register.force },
                 },
             )?;
         }

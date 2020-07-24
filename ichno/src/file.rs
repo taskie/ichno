@@ -16,7 +16,7 @@ use twox_hash::XxHash64;
 use url::Url;
 
 use crate::{
-    constants::{Status, META_NAMESPACE_ID},
+    constants::{NamespaceType, Status, META_NAMESPACE_ID},
     db::{SqliteHistories, SqliteNamespaces, SqliteObjects, SqliteStats},
     models::{
         HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, ObjectInsertForm, Stat, StatInsertForm,
@@ -139,10 +139,10 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
             &NamespaceInsertForm {
                 id: namespace_id,
                 url: &url,
-                description: "",
-                history_id: -1,
-                version: -1,
-                status: Status::DISABLED as i32,
+                type_: NamespaceType::LOCAL as i32,
+                history_id: None,
+                version: None,
+                status: None,
                 mtime: None,
                 object_id: None,
                 digest: None,
@@ -167,10 +167,10 @@ pub fn post_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn E
         ctx.namespace_id,
         &NamespaceUpdateForm {
             url: &old_namespace.url,
-            description: &old_namespace.description,
-            history_id: stat.history_id,
-            version: stat.version,
-            status: stat.status,
+            type_: old_namespace.type_,
+            history_id: Some(stat.history_id),
+            version: Some(stat.version),
+            status: Some(stat.status),
             mtime: stat.mtime,
             object_id: stat.object_id,
             digest: stat.digest.as_ref().map(|s| s.as_ref()),

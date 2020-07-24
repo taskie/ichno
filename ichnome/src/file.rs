@@ -16,7 +16,7 @@ use twox_hash::XxHash64;
 use url::Url;
 
 use crate::{
-    constants::{Status, META_NAMESPACE_ID},
+    constants::{NamespaceType, Status, META_NAMESPACE_ID},
     db::{MysqlHistories, MysqlNamespaces, MysqlObjects, MysqlStats},
     models::{
         HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, ObjectInsertForm, Stat, StatInsertForm,
@@ -26,10 +26,10 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct FileMetadata {
-    pub(crate) size: i64,
-    pub(crate) mtime: NaiveDateTime,
-    pub(crate) fast_digest: i64,
-    pub(crate) digest: String,
+    pub size: i64,
+    pub mtime: NaiveDateTime,
+    pub fast_digest: i64,
+    pub digest: String,
 }
 
 pub(crate) fn new_updated_metadata_if_needed(
@@ -112,12 +112,15 @@ pub struct Context<'c, 'a, Tz: TimeZone> {
 
 impl<'c, 'a, Tz: TimeZone> Context<'c, 'a, Tz> {
     pub fn naive_current_time(&self) -> NaiveDateTime {
-        let cur = &self.current_time;
-        return NaiveDateTime::from_timestamp(cur.timestamp(), cur.timestamp_subsec_nanos());
+        self.current_time.naive_utc()
     }
 
     pub fn base_directory(&self) -> Option<PathBuf> {
-        self.namespace.as_ref().and_then(|ns| Url::parse(&ns.url).ok()).map(|url| PathBuf::from(url.path()))
+        self.namespace
+            .as_ref()
+            .and_then(|ns| Url::parse(&ns.url).ok())
+            .map(|url| PathBuf::from(url.path()))
+            .and_then(|p| p.parent().map(PathBuf::from))
     }
 }
 
@@ -130,17 +133,16 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
         ctx.namespace = Some(namespace);
     } else {
         let abs_db_path = ctx.db_path.canonicalize()?;
-        let base_dir = abs_db_path.parent().unwrap();
-        let url = format!("file://{}", base_dir.to_str().unwrap());
+        let url = format!("file://{}", abs_db_path.to_str().unwrap());
         namespace = Some(MysqlNamespaces::insert_and_find(
             &conn,
             &NamespaceInsertForm {
                 id: namespace_id,
                 url: &url,
-                description: "",
-                history_id: -1,
-                version: -1,
-                status: Status::DISABLED as i32,
+                type_: NamespaceType::LOCAL as i32,
+                history_id: None,
+                version: None,
+                status: None,
                 mtime: None,
                 object_id: None,
                 digest: None,
@@ -158,17 +160,17 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
 
 pub fn post_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Error>> {
     let meta_namespace_id = META_NAMESPACE_ID;
-    let stat = upsert_with_file(ctx, meta_namespace_id, ctx.db_path)?;
+    let stat = upsert_with_file_without_canonicalization(ctx, meta_namespace_id, ctx.namespace_id, ctx.db_path)?;
     let old_namespace = ctx.namespace.clone().unwrap();
     let namespace = MysqlNamespaces::update_and_find(
         ctx.connection,
         ctx.namespace_id,
         &NamespaceUpdateForm {
             url: &old_namespace.url,
-            description: &old_namespace.description,
-            history_id: stat.history_id,
-            version: stat.version,
-            status: stat.status,
+            type_: old_namespace.type_,
+            history_id: Some(stat.history_id),
+            version: Some(stat.version),
+            status: Some(stat.status),
             mtime: stat.mtime,
             object_id: stat.object_id,
             digest: stat.digest.as_ref().map(|s| s.as_ref()),
@@ -189,7 +191,7 @@ pub fn remove_with_file<Tz: TimeZone, P: AsRef<Path>>(
 ) -> Result<Option<Stat>, Box<dyn Error>> {
     let conn = ctx.connection;
     let base_path = ctx.base_directory().unwrap();
-    let path = base_path.join(path);
+    let path = if path.as_ref().is_absolute() { PathBuf::from(path.as_ref()) } else { base_path.join(path) };
     let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
     debug!("* {}", path_str);
@@ -246,21 +248,30 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
     namespace_id: &str,
     path: P,
 ) -> Result<Stat, Box<dyn Error>> {
-    let conn = ctx.connection;
     let base_path = ctx.base_directory().unwrap();
-    let path = path.as_ref().canonicalize()?;
+    let path = if path.as_ref().is_absolute() { PathBuf::from(path.as_ref()) } else { base_path.join(path) };
     let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
+    upsert_with_file_without_canonicalization(ctx, namespace_id, path_str, path_ref)
+}
+
+pub(crate) fn upsert_with_file_without_canonicalization<Tz: TimeZone>(
+    ctx: &Context<Tz>,
+    namespace_id: &str,
+    path_str: &str,
+    file_path: &Path,
+) -> Result<Stat, Box<dyn Error>> {
+    let conn = ctx.connection;
     debug!("* {}", path_str);
     let old_stat = MysqlStats::find_by_path(conn, namespace_id, path_str)?;
     let now = ctx.naive_current_time();
-    let metadata = new_updated_metadata_if_needed(&old_stat, path_ref)?;
+    let metadata = new_updated_metadata_if_needed(&old_stat, file_path)?;
     trace!("- updated_metadata: {:?}", metadata);
     if let Some(metadata) = metadata {
         let mut object = MysqlObjects::find_by_digest(conn, &metadata.digest)?;
         if object == None {
             let mut hasher = Sha1::default();
-            treblo::object::blob_from_path(&mut hasher, path_ref)?;
+            treblo::object::blob_from_path(&mut hasher, file_path)?;
             let git_object_id = treblo::hex::to_hex_string(hasher.fixed_result().as_slice());
             object = Some(MysqlObjects::insert_and_find(
                 conn,

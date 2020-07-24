@@ -17,10 +17,11 @@ table! {
     namespaces (id) {
         id -> Varchar,
         url -> Varchar,
-        description -> Varchar,
-        history_id -> Integer,
-        version -> Integer,
-        status -> Integer,
+        #[sql_name = "type"]
+        type_ -> Integer,
+        history_id -> Nullable<Integer>,
+        version -> Nullable<Integer>,
+        status -> Nullable<Integer>,
         mtime -> Nullable<Datetime>,
         object_id -> Nullable<Integer>,
         digest -> Nullable<Char>,
