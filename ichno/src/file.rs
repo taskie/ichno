@@ -161,22 +161,21 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
 pub fn post_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Error>> {
     let meta_namespace_id = META_NAMESPACE_ID;
     let stat = upsert_with_file_without_canonicalization(ctx, meta_namespace_id, ctx.namespace_id, ctx.db_path)?;
-    let old_namespace = ctx.namespace.clone().unwrap();
     let namespace = SqliteNamespaces::update_and_find(
         ctx.connection,
         ctx.namespace_id,
         &NamespaceUpdateForm {
-            url: &old_namespace.url,
-            type_: old_namespace.type_,
-            history_id: Some(stat.history_id),
-            version: Some(stat.version),
-            status: Some(stat.status),
-            mtime: stat.mtime,
-            object_id: stat.object_id,
-            digest: stat.digest.as_ref().map(|s| s.as_ref()),
-            size: stat.size,
-            fast_digest: stat.fast_digest,
-            updated_at: ctx.naive_current_time(),
+            type_: None,
+            url: None,
+            history_id: Some(Some(stat.history_id)),
+            version: Some(Some(stat.version)),
+            status: Some(Some(stat.status)),
+            mtime: Some(stat.mtime),
+            object_id: Some(stat.object_id),
+            digest: Some(stat.digest.as_ref().map(|s| s.as_ref())),
+            size: Some(stat.size),
+            fast_digest: Some(stat.fast_digest),
+            updated_at: Some(ctx.naive_current_time()),
         },
     )?;
     trace!("- namespace: {:?}", namespace);
@@ -225,15 +224,15 @@ pub fn remove_with_file<Tz: TimeZone, P: AsRef<Path>>(
             conn,
             old_stat.id,
             &StatUpdateForm {
-                history_id: history.id,
-                version: history.version,
-                status: history.status,
-                mtime: history.mtime,
-                object_id: history.object_id,
-                digest: None,
-                size: None,
-                fast_digest: None,
-                updated_at: now,
+                history_id: Some(history.id),
+                version: Some(history.version),
+                status: Some(history.status),
+                mtime: Some(history.mtime),
+                object_id: Some(history.object_id),
+                digest: Some(None),
+                size: Some(None),
+                fast_digest: Some(None),
+                updated_at: Some(now),
             },
         )?;
         trace!("- stat: {:?}", stat);
@@ -310,15 +309,15 @@ pub(crate) fn upsert_with_file_without_canonicalization<Tz: TimeZone>(
                 conn,
                 old_stat.id,
                 &StatUpdateForm {
-                    history_id: history.id,
-                    version: history.version,
-                    status: history.status,
-                    mtime: history.mtime,
-                    object_id: history.object_id,
-                    digest: Some(object.digest.as_str()),
-                    size: Some(object.size),
-                    fast_digest: Some(object.fast_digest),
-                    updated_at: now,
+                    history_id: Some(history.id),
+                    version: Some(history.version),
+                    status: Some(history.status),
+                    mtime: Some(history.mtime),
+                    object_id: Some(history.object_id),
+                    digest: Some(Some(object.digest.as_str())),
+                    size: Some(Some(object.size)),
+                    fast_digest: Some(Some(object.fast_digest)),
+                    updated_at: Some(now),
                 },
             )?,
             None => SqliteStats::insert_and_find(

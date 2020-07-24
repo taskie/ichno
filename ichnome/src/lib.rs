@@ -4,6 +4,8 @@ extern crate diesel;
 extern crate diesel_migrations;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate optional_derive;
 
 pub mod action;
 pub mod db;

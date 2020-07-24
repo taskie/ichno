@@ -89,11 +89,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    attributes,
-    contents,
-    histories,
-    namespaces,
-    objects,
-    stats,
-);
+allow_tables_to_appear_in_same_query!(attributes, contents, histories, namespaces, objects, stats,);
