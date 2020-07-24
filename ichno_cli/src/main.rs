@@ -71,7 +71,7 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
                     Err(err) => warn!("{}", err),
                 }
             }
-            let stats = SqliteStats::select(&conn, namespace_id)?;
+            let stats = SqliteStats::select_by_namespace_id(&conn, namespace_id)?;
             for stat in stats.iter() {
                 if path_set.contains(&stat.path) {
                     continue;

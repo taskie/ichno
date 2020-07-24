@@ -161,7 +161,7 @@ fn load_local_db<Tz: TimeZone>(
     let local_conn = &local_conn;
     let local_namespace_id = ichno::DEFAULT_NAMESPACE_ID;
 
-    let local_stats = SqliteStats::select(&local_conn, local_namespace_id)?;
+    let local_stats = SqliteStats::select_by_namespace_id(&local_conn, local_namespace_id)?;
     for local_stat in local_stats.iter() {
         let path = &local_stat.path;
         let global_stat = MysqlStats::find_by_path(global_conn, global_namespace_id, path)?;
