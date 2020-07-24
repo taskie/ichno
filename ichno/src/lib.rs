@@ -5,8 +5,14 @@ extern crate diesel_migrations;
 #[macro_use]
 extern crate log;
 
-pub mod consts;
-pub mod fs;
-pub mod models;
-pub mod schema;
-pub mod sqlite;
+pub mod db;
+pub mod file;
+
+mod constants;
+mod models;
+
+pub use constants::{Status, DEFAULT_NAMESPACE_ID, META_NAMESPACE_ID};
+pub use models::{
+    HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, ObjectInsertForm, Stat, StatInsertForm,
+    StatUpdateForm,
+};

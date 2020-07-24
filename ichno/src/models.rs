@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 
-use crate::schema::{histories, namespaces, objects, stats};
+use crate::db::schema::{histories, namespaces, objects, stats};
 
 #[derive(Clone, Debug, PartialEq, Identifiable, Queryable)]
 #[table_name = "objects"]

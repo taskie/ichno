@@ -9,27 +9,27 @@ use std::{
 };
 
 use chrono::{DateTime, NaiveDateTime, TimeZone};
-use diesel::mysql::MysqlConnection;
+use diesel::sqlite::SqliteConnection;
 use sha1::Sha1;
 use sha2::{digest::FixedOutput, Sha256};
 use twox_hash::XxHash64;
 use url::Url;
 
 use crate::{
-    consts::{Status, META_NAMESPACE_ID},
+    constants::{Status, META_NAMESPACE_ID},
+    db::{SqliteHistories, SqliteNamespaces, SqliteObjects, SqliteStats},
     models::{
         HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, ObjectInsertForm, Stat, StatInsertForm,
         StatUpdateForm,
     },
-    mysql::{MysqlHistories, MysqlNamespaces, MysqlObjects, MysqlStats},
 };
 
 #[derive(Debug)]
 pub(crate) struct FileMetadata {
-    pub(crate) size: i64,
-    pub(crate) mtime: NaiveDateTime,
-    pub(crate) fast_digest: i64,
-    pub(crate) digest: String,
+    pub size: i64,
+    pub mtime: NaiveDateTime,
+    pub fast_digest: i64,
+    pub digest: String,
 }
 
 pub(crate) fn new_updated_metadata_if_needed(
@@ -103,7 +103,7 @@ pub(crate) fn new_updated_metadata_if_needed(
 }
 
 pub struct Context<'c, 'a, Tz: TimeZone> {
-    pub connection: &'c MysqlConnection,
+    pub connection: &'c SqliteConnection,
     pub db_path: &'a Path,
     pub namespace_id: &'a str,
     pub namespace: Option<Namespace>,
@@ -112,8 +112,7 @@ pub struct Context<'c, 'a, Tz: TimeZone> {
 
 impl<'c, 'a, Tz: TimeZone> Context<'c, 'a, Tz> {
     pub fn naive_current_time(&self) -> NaiveDateTime {
-        let cur = &self.current_time;
-        return NaiveDateTime::from_timestamp(cur.timestamp(), cur.timestamp_subsec_nanos());
+        self.current_time.naive_utc()
     }
 
     pub fn base_directory(&self) -> Option<PathBuf> {
@@ -125,14 +124,14 @@ pub fn pre_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn Er
     let conn = ctx.connection;
     let namespace_id = ctx.namespace_id;
     let now = ctx.naive_current_time();
-    let mut namespace = MysqlNamespaces::find(conn, namespace_id)?;
+    let mut namespace = SqliteNamespaces::find(conn, namespace_id)?;
     if let Some(namespace) = namespace {
         ctx.namespace = Some(namespace);
     } else {
         let abs_db_path = ctx.db_path.canonicalize()?;
         let base_dir = abs_db_path.parent().unwrap();
         let url = format!("file://{}", base_dir.to_str().unwrap());
-        namespace = Some(MysqlNamespaces::insert_and_find(
+        namespace = Some(SqliteNamespaces::insert_and_find(
             &conn,
             &NamespaceInsertForm {
                 id: namespace_id,
@@ -160,7 +159,7 @@ pub fn post_process<Tz: TimeZone>(ctx: &mut Context<Tz>) -> Result<(), Box<dyn E
     let meta_namespace_id = META_NAMESPACE_ID;
     let stat = upsert_with_file(ctx, meta_namespace_id, ctx.db_path)?;
     let old_namespace = ctx.namespace.clone().unwrap();
-    let namespace = MysqlNamespaces::update_and_find(
+    let namespace = SqliteNamespaces::update_and_find(
         ctx.connection,
         ctx.namespace_id,
         &NamespaceUpdateForm {
@@ -193,18 +192,18 @@ pub fn remove_with_file<Tz: TimeZone, P: AsRef<Path>>(
     let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
     debug!("* {}", path_str);
-    let old_stat = MysqlStats::find_by_path(conn, namespace_id, path_str)?;
+    let old_stat = SqliteStats::find_by_path(conn, namespace_id, path_str)?;
     if let Some(old_stat) = old_stat {
         if old_stat.status == Status::DISABLED as i32 {
             return Ok(Some(old_stat));
         }
         let now = ctx.naive_current_time();
-        let last_history = MysqlHistories::find_latest_by_path(conn, namespace_id, path_str)?;
+        let last_history = SqliteHistories::find_latest_by_path(conn, namespace_id, path_str)?;
         let version = match last_history {
             Some(h) => h.version + 1,
             None => 1,
         };
-        let history = MysqlHistories::insert_and_find(
+        let history = SqliteHistories::insert_and_find(
             conn,
             &HistoryInsertForm {
                 namespace_id,
@@ -219,7 +218,7 @@ pub fn remove_with_file<Tz: TimeZone, P: AsRef<Path>>(
             },
         )?;
         trace!("- history: {:?}", history);
-        let stat = MysqlStats::update_and_find(
+        let stat = SqliteStats::update_and_find(
             conn,
             old_stat.id,
             &StatUpdateForm {
@@ -252,17 +251,17 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
     let path_ref = path.strip_prefix(base_path)?;
     let path_str = path_ref.to_str().expect(&format!("invalid path string"));
     debug!("* {}", path_str);
-    let old_stat = MysqlStats::find_by_path(conn, namespace_id, path_str)?;
+    let old_stat = SqliteStats::find_by_path(conn, namespace_id, path_str)?;
     let now = ctx.naive_current_time();
     let metadata = new_updated_metadata_if_needed(&old_stat, path_ref)?;
     trace!("- updated_metadata: {:?}", metadata);
     if let Some(metadata) = metadata {
-        let mut object = MysqlObjects::find_by_digest(conn, &metadata.digest)?;
+        let mut object = SqliteObjects::find_by_digest(conn, &metadata.digest)?;
         if object == None {
             let mut hasher = Sha1::default();
             treblo::object::blob_from_path(&mut hasher, path_ref)?;
             let git_object_id = treblo::hex::to_hex_string(hasher.fixed_result().as_slice());
-            object = Some(MysqlObjects::insert_and_find(
+            object = Some(SqliteObjects::insert_and_find(
                 conn,
                 &ObjectInsertForm {
                     digest: &metadata.digest,
@@ -274,12 +273,12 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
         }
         let object = object.unwrap();
         trace!("- object: {:?}", object);
-        let last_history = MysqlHistories::find_latest_by_path(conn, namespace_id, path_str)?;
+        let last_history = SqliteHistories::find_latest_by_path(conn, namespace_id, path_str)?;
         let version = match last_history {
             Some(h) => h.version + 1,
             None => 1,
         };
-        let history = MysqlHistories::insert_and_find(
+        let history = SqliteHistories::insert_and_find(
             conn,
             &HistoryInsertForm {
                 namespace_id,
@@ -295,7 +294,7 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
         )?;
         trace!("- history: {:?}", history);
         let stat = match old_stat {
-            Some(old_stat) => MysqlStats::update_and_find(
+            Some(old_stat) => SqliteStats::update_and_find(
                 conn,
                 old_stat.id,
                 &StatUpdateForm {
@@ -310,7 +309,7 @@ pub fn upsert_with_file<Tz: TimeZone, P: AsRef<Path>>(
                     updated_at: now,
                 },
             )?,
-            None => MysqlStats::insert_and_find(
+            None => SqliteStats::insert_and_find(
                 conn,
                 &StatInsertForm {
                     namespace_id,

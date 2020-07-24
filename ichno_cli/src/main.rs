@@ -9,7 +9,7 @@ use dotenv;
 use ignore;
 use twox_hash::RandomXxHashBuilder64;
 
-use ichno::{consts::DEFAULT_NAMESPACE_ID, fs, sqlite::SqliteStats};
+use ichno::{db::SqliteStats, file, DEFAULT_NAMESPACE_ID};
 
 fn main_with_error() -> Result<i32, Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -19,11 +19,16 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
     let conn = SqliteConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
     let db_path = Path::new(&database_url).canonicalize()?;
 
-    ichno::sqlite::migrate(&conn)?;
+    ichno::db::migrate(&conn)?;
 
     let namespace_id = DEFAULT_NAMESPACE_ID;
-    let mut ctx =
-        fs::Context { connection: &conn, db_path: &db_path, namespace_id, namespace: None, current_time: Local::now() };
+    let mut ctx = file::Context {
+        connection: &conn,
+        db_path: &db_path,
+        namespace_id,
+        namespace: None,
+        current_time: Local::now(),
+    };
     let path = Path::new(".");
 
     let w = {
@@ -31,13 +36,13 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
         wb.filter_entry(|p| p.file_name() != OsStr::new(".git") && p.file_name() != OsStr::new("ichno.db"));
         wb.build()
     };
-    fs::pre_process(&mut ctx)?;
+    file::pre_process(&mut ctx)?;
     let mut path_set: HashSet<_, RandomXxHashBuilder64> = Default::default();
     for result in w {
         match result {
             Ok(entry) => {
                 if entry.metadata().unwrap().is_file() {
-                    let path = fs::upsert_with_file(&ctx, namespace_id, entry.path())?.path;
+                    let path = file::upsert_with_file(&ctx, namespace_id, entry.path())?.path;
                     path_set.insert(path);
                 }
             }
@@ -51,10 +56,10 @@ fn main_with_error() -> Result<i32, Box<dyn Error>> {
         }
         let path = Path::new(&stat.path);
         if !path.exists() {
-            fs::remove_with_file(&ctx, namespace_id, path)?;
+            file::remove_with_file(&ctx, namespace_id, path)?;
         }
     }
-    fs::post_process(&mut ctx)?;
+    file::post_process(&mut ctx)?;
     Ok(0)
 }
 

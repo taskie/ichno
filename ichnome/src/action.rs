@@ -3,21 +3,21 @@ use std::{error::Error, path::Path};
 use chrono::{DateTime, TimeZone};
 use diesel::{Connection, MysqlConnection, SqliteConnection};
 use ichno::{
-    consts::Status,
-    sqlite::{SqliteHistories, SqliteObjects, SqliteStats},
+    db::{SqliteHistories, SqliteObjects, SqliteStats},
+    Status,
 };
 use sha1::Sha1;
 use url::Url;
 
 use crate::{
-    consts::META_NAMESPACE_ID,
-    fs,
-    fs::FileMetadata,
+    constants::META_NAMESPACE_ID,
+    db::{MysqlHistories, MysqlNamespaces, MysqlObjects, MysqlStats},
+    file,
+    file::FileMetadata,
     models::{
         HistoryInsertForm, Namespace, NamespaceInsertForm, NamespaceUpdateForm, ObjectInsertForm, Stat, StatInsertForm,
         StatUpdateForm,
     },
-    mysql::{MysqlHistories, MysqlNamespaces, MysqlObjects, MysqlStats},
     ssh,
 };
 use sha1::digest::FixedOutput;
@@ -149,7 +149,7 @@ fn load_local_db<Tz: TimeZone>(
     let global_namespace_id = req.namespace_id.as_str();
 
     let meta_stat = MysqlStats::find_by_path(global_conn, META_NAMESPACE_ID, global_namespace_id)?;
-    let updated_metadata = fs::new_updated_metadata_if_needed(&meta_stat, path)?;
+    let updated_metadata = file::new_updated_metadata_if_needed(&meta_stat, path)?;
     match updated_metadata {
         None => {
             return Ok(());
@@ -160,7 +160,7 @@ fn load_local_db<Tz: TimeZone>(
 
     let local_conn = SqliteConnection::establish(path.to_str().unwrap())?;
     let local_conn = &local_conn;
-    let local_namespace_id = ichno::consts::DEFAULT_NAMESPACE_ID;
+    let local_namespace_id = ichno::DEFAULT_NAMESPACE_ID;
 
     let local_stats = SqliteStats::select(&local_conn, local_namespace_id)?;
     for local_stat in local_stats.iter() {
