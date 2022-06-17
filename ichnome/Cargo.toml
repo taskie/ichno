@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 chrono = { version = "0.4.1", features = ["serde"] }
-diesel = { version = "1.4.5", features = ["extras", "mysql", "sqlite"] }
+diesel = { version = "1.4.6", features = ["extras", "mysql", "sqlite"] }
 diesel_migrations = "1.4.0"
 ichno = { path = "../ichno" }
 log = "0.4.8"
